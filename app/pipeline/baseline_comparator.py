@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 
 
 @dataclass(frozen = True)
@@ -10,9 +11,6 @@ class ReactionComparison:
     baseline_rate: int
     ratio: float
     signal_score: float
-
-
-import math
 
 
 def compute_signal_score(
@@ -70,5 +68,4 @@ def compare_reaction_counts(recent_counts, baseline_counts, total_recent_reports
         comparisons.append(ReactionComparison(reaction, recent_count, baseline_count, recent_rate, baseline_rate, ratio, signal_score))
 
     return sorted(comparisons, key = lambda item:item.signal_score, reverse=True)
-
 

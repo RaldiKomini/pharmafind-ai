@@ -1,11 +1,16 @@
 import argparse
-import json
+from pathlib import Path
 
-from app.pipeline.review_summary import review_summary_to_dict
 from app.pipeline.safety_review_pipeline import (
     SafetyReviewConfig,
     run_safety_review,
 )
+from app.reports.markdown_renderer import render_markdown_report
+from app.reports.pdf_renderer import render_pdf_from_markdown
+
+
+def make_safe_filename(value: str) -> str:
+    return value.strip().lower().replace(" ", "_")
 
 
 def main() -> None:
@@ -29,7 +34,16 @@ def main() -> None:
         )
     )
 
-    print(json.dumps(review_summary_to_dict(summary), indent=2))
+    markdown_report = render_markdown_report(summary)
+
+    output_path = Path("reports") / f"{make_safe_filename(args.drug)}_safety_review.pdf"
+
+    render_pdf_from_markdown(
+        markdown_text=markdown_report,
+        output_path=output_path,
+    )
+
+    print(f"PDF saved to: {output_path}")
 
 
 if __name__ == "__main__":
