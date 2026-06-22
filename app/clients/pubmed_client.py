@@ -8,6 +8,8 @@ PUBMED_ESUMMARY_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fc
 
 @dataclass(frozen=True)
 class PubMedSearchConfig:
+    """PubMed query settings for one drug/reaction evidence search."""
+
     drug_name:str
     reaction: str
     max_results: int = 5
@@ -15,6 +17,8 @@ class PubMedSearchConfig:
 
 @dataclass(frozen=True)
 class PubMedPaperSummary:
+    """Small subset of PubMed metadata needed by the report and UI."""
+
     pmid: str
     title: str
     source: str
@@ -33,10 +37,12 @@ class PubMedClient:
         self.timeout = timeout
 
     def search_papers(self, config: PubMedSearchConfig) -> list[PubMedPaperSummary]:
+        """Search PubMed and return summaries in the same order as the IDs."""
         ids = self._search_pubmed_ids(config)
         return self._fetch_summaries(ids)
 
     def _search_pubmed_ids(self, config: PubMedSearchConfig):
+        """Return PubMed IDs for a drug/reaction title-or-abstract query."""
 
         query = f'("{config.drug_name}" [TITLE/ABSTRACT]) AND ("{config.reaction}" [TITLE/ABSTRACT])'
 
@@ -55,6 +61,7 @@ class PubMedClient:
         return data.get("esearchresult", {}).get("idlist", [])
     
     def _fetch_summaries(self, ids: list[str]) -> list[PubMedPaperSummary]:
+        """Fetch display metadata for PubMed IDs returned by esearch."""
         params = {
             "db": "pubmed",
             "id": ",".join(ids),

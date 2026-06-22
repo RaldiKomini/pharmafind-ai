@@ -5,6 +5,8 @@ from app.agent.tools import (
     compare_drugs_tool
 )
 
+# Tool schemas exposed to the OpenAI chat-completions tool-calling API.
+# The functions themselves live in tools.py so they can be tested separately.
 TOOLS = [
     {
         "type": "function",

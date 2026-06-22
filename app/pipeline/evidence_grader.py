@@ -4,6 +4,8 @@ from app.clients.pubmed_client import PubMedPaperSummary
 
 @dataclass(frozen=True)
 class EvidenceSummary:
+    """PubMed evidence attached to one flagged reporting signal."""
+
     paper_count: int
     evidence_grade: str
     papers: list[PubMedPaperSummary]

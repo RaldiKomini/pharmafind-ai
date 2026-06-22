@@ -8,14 +8,17 @@ OPENFDA_MAX_UNAUTHENTICATED_LIMIT = 100
 
 @dataclass(frozen = True)
 class FaersQueryConfig:
+    """Parameters for one openFDA FAERS query window."""
+
     drug_name: str
     limit: int = 100
     start_date: date | None = None
     end_date: date | None = None
     sort: str | None = "receivedate:desc"
-    
+
 
 def format_faers_date(value: date) -> str:
+    """Convert a Python date to the YYYYMMDD format expected by FAERS."""
     return value.strftime("%Y%m%d")
 
 
@@ -61,6 +64,8 @@ class FaersClient:
         search = " AND ".join(search_parts)
 
         while len(reports) < config.limit:
+            # openFDA caps unauthenticated requests at 100 rows, so larger
+            # windows are fetched one page at a time.
             page_limit = min(
                 OPENFDA_MAX_UNAUTHENTICATED_LIMIT,
                 config.limit - len(reports),

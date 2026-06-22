@@ -9,6 +9,9 @@ def render_pdf_from_markdown(
 ) -> Path:
     """
     Convert a Markdown report to a PDF file.
+
+    WeasyPrint is imported inside the function so the rest of the app can run
+    even on Windows machines that do not have the native PDF libraries installed.
     """
 
     html_body = markdown.markdown(

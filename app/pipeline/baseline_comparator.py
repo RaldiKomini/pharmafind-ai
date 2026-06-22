@@ -4,6 +4,8 @@ import math
 
 @dataclass(frozen = True)
 class ReactionComparison:
+    """Recent-vs-baseline comparison for one normalized reaction term."""
+
     reaction: str
     recent_count:int
     baseline_count: int
@@ -59,6 +61,8 @@ def compare_reaction_counts(recent_counts, baseline_counts, total_recent_reports
 
 
         if baseline_rate == 0.0:
+            # Keep the math explicit here; the detector later filters out
+            # baseline-zero signals so infinite ratios do not dominate output.
             ratio = float("inf") if recent_rate > 0.0 else 0.0
         else:
             ratio = recent_rate / baseline_rate
@@ -68,4 +72,3 @@ def compare_reaction_counts(recent_counts, baseline_counts, total_recent_reports
         comparisons.append(ReactionComparison(reaction, recent_count, baseline_count, recent_rate, baseline_rate, ratio, signal_score))
 
     return sorted(comparisons, key = lambda item:item.signal_score, reverse=True)
-

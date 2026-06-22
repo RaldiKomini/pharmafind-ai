@@ -12,6 +12,8 @@ from app.pipeline.safety_signal import build_safety_signal
 
 @dataclass(frozen=True)
 class SafetyReviewConfig:
+    """Top-level configuration for a full FAERS + PubMed safety review."""
+
     drug_name: str
     recent_days: int = 90
     baseline_days: int = 365
@@ -24,6 +26,12 @@ def run_safety_review(
     config: SafetyReviewConfig,
     pubmed_client: PubMedClient | None = None,
 ) -> ReviewSummary:
+    """
+    Run the full deterministic review pipeline.
+
+    FAERS determines which reporting patterns are flagged. PubMed is searched
+    afterward only to summarize literature support for those flagged patterns.
+    """
     if pubmed_client is None:
         pubmed_client = PubMedClient()
 
@@ -40,6 +48,8 @@ def run_safety_review(
     safety_signals = []
 
     for signal in faers_result.signals:
+        # PubMed search is intentionally scoped to flagged signals so the review
+        # stays focused and external API calls remain bounded.
         papers = pubmed_client.search_papers(
             PubMedSearchConfig(
                 drug_name=config.drug_name,

@@ -10,6 +10,8 @@ from app.pipeline.signal_detector import SignalDetectionConfig, detect_signals
 
 @dataclass(frozen=True)
 class FaersSignalReviewConfig:
+    """Configuration for the FAERS-only signal detection step."""
+
     drug_name: str
     recent_days: int = 90
     baseline_days: int = 365
@@ -22,6 +24,8 @@ class FaersSignalReviewConfig:
 
 @dataclass(frozen=True)
 class FaersSignalReviewResult:
+    """FAERS-only result before PubMed evidence is attached."""
+
     drug_name: str
     recent_start: date
     recent_end: date
@@ -52,6 +56,8 @@ def run_faers_signal_review(
     recent_end = today
     recent_start = recent_end - timedelta(days=config.recent_days)
 
+    # Fetching the windows separately is important: one "latest reports" query
+    # would mostly return recent reports and leave too little baseline data.
     baseline_end = recent_start - timedelta(days=1)
     baseline_start = baseline_end - timedelta(days=config.baseline_days)
 

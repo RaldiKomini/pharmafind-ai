@@ -7,6 +7,8 @@ from app.pipeline.safety_signal import SafetySignal
 
 @dataclass(frozen=True)
 class ReviewSummary:
+    """Final deterministic review object returned to API/report layers."""
+
     drug_name: str
 
     recent_start: date
@@ -32,6 +34,7 @@ def build_review_summary(
     baseline_report_count: int,
     signals: list[SafetySignal],
 ) -> ReviewSummary:
+    """Assemble the final review summary with standard safety limitations."""
     return ReviewSummary(
         drug_name=drug_name,
         recent_start=recent_start,

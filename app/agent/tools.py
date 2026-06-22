@@ -18,6 +18,9 @@ def run_safety_review_tool(
     max_signals: int = 10,
     max_pubmed_papers_per_signal: int = 3,
 ) -> dict[str, Any]:
+    """
+    Run the deterministic review pipeline and cache the result for follow-ups.
+    """
     summary = run_safety_review(
         SafetyReviewConfig(
             drug_name=drug_name,
@@ -32,7 +35,8 @@ def run_safety_review_tool(
     summary_dict = review_summary_to_dict(summary)
     markdown_report = render_markdown_report(summary)
 
-
+    # Agent tools share a simple process-local cache so "explain that signal"
+    # and "generate a PDF" can refer to the review that just ran.
     SESSION_STATE.last_drug_name = drug_name
     SESSION_STATE.last_review_summary = summary_dict
     SESSION_STATE.last_markdown_report = markdown_report

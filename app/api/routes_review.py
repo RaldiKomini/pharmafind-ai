@@ -20,6 +20,7 @@ router = APIRouter(prefix="/reviews", tags=["reviews"])
 
 @router.post("", response_model=SafetyReviewResponse)
 def create_safety_review(request: SafetyReviewRequest) -> SafetyReviewResponse:
+    """Run the review pipeline and return both structured data and Markdown."""
     summary = run_safety_review(
         SafetyReviewConfig(
             drug_name=request.drug_name,
@@ -37,6 +38,8 @@ def create_safety_review(request: SafetyReviewRequest) -> SafetyReviewResponse:
         try:
             markdown_report = generate_llm_safety_brief(summary)
         except RateLimitError:
+            # The deterministic report is still useful, so rate limits should not
+            # make the whole review fail.
             markdown_report = (
                 "> LLM report generation was skipped because OpenAI rate-limited the request.\n\n"
                 + render_markdown_report(summary)
@@ -54,6 +57,7 @@ def create_safety_review(request: SafetyReviewRequest) -> SafetyReviewResponse:
 
 @router.post("/pdf")
 def create_safety_review_pdf(request: SafetyReviewRequest) -> FileResponse:
+    """Run a deterministic review and return a generated PDF report."""
     summary = run_safety_review(
         SafetyReviewConfig(
             drug_name=request.drug_name,
@@ -70,6 +74,7 @@ def create_safety_review_pdf(request: SafetyReviewRequest) -> FileResponse:
     output_dir = Path("reports")
     output_dir.mkdir(exist_ok=True)
 
+    # Keep generated filenames predictable and safe for normal local use.
     safe_drug_name = request.drug_name.strip().lower().replace(" ", "_")
     output_path = output_dir / f"{safe_drug_name}_safety_review.pdf"
 

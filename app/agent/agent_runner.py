@@ -10,6 +10,12 @@ MAX_AGENT_TURNS = 4
 MAX_TOOL_CALLS = 3
 
 def run_agent(user_message):
+    """
+    Run the OpenAI tool-calling loop for one user message.
+
+    The agent can decide which backend tool to call, but the tool limits below
+    keep one chat request from looping or repeatedly hitting external APIs.
+    """
     client = OpenAI(api_key = os.environ["OPENAI_API_KEY"])
 
     messages = [

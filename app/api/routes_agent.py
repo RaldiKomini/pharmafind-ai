@@ -12,6 +12,7 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 
 @router.post("/chat", response_model=AgentChatResponse)
 def chat_with_agent(request: AgentChatRequest) -> AgentChatResponse:
+    """Send a message to the tool-using agent and return cached state metadata."""
     answer = run_agent(request.message)
 
     return AgentChatResponse(
@@ -23,6 +24,7 @@ def chat_with_agent(request: AgentChatRequest) -> AgentChatResponse:
 
 @router.get("/pdf")
 def download_agent_pdf() -> FileResponse:
+    """Download the latest PDF produced by the agent tool layer."""
     if SESSION_STATE.last_pdf_path is None:
         raise HTTPException(
             status_code=404,

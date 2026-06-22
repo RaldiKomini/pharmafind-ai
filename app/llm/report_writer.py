@@ -12,6 +12,7 @@ def generate_llm_safety_brief(summary: ReviewSummary):
     Generate a polished Markdown safety-review brief from a compact ReviewSummary.
 
     The LLM receives only structured summary data, not raw FAERS reports.
+    Signal detection has already happened before this function is called.
     """
     client = OpenAI(api_key = os.environ["OPENAI_API_KEY"])
     summary_dict = review_summary_to_dict(summary)

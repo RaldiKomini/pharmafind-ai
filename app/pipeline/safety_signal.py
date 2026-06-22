@@ -6,6 +6,8 @@ from app.pipeline.evidence_grader import EvidenceSummary
 
 @dataclass(frozen=True)
 class SafetySignal:
+    """One flagged reporting signal plus its PubMed evidence summary."""
+
     reaction: str
     recent_count: int
     baseline_count: int
@@ -20,6 +22,7 @@ def build_safety_signal(
     comparison: ReactionComparison,
     evidence: EvidenceSummary,
 ) -> SafetySignal:
+    """Combine FAERS comparison data with PubMed evidence."""
     return SafetySignal(
         reaction=comparison.reaction,
         recent_count=comparison.recent_count,

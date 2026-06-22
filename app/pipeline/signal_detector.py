@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class SignalDetectionConfig:
+    """Thresholds used to keep the signal table focused and less noisy."""
+
     min_recent_count: int = 10
     min_baseline_count: int = 3
     min_ratio: float = 2.0

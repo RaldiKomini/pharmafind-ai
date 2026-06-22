@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  color: #0f172a;
+  background: #f7f9fc;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Soft scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Markdown viewer */
+.markdown-body h1 {
+  @apply text-2xl font-bold text-slate-900 mt-6 mb-3;
+}
+.markdown-body h2 {
+  @apply text-xl font-semibold text-slate-900 mt-5 mb-2;
+}
+.markdown-body h3 {
+  @apply text-base font-semibold text-slate-800 mt-4 mb-2;
+}
+.markdown-body p {
+  @apply text-sm text-slate-700 leading-relaxed mb-3;
+}
+.markdown-body ul {
+  @apply list-disc pl-6 mb-3 text-sm text-slate-700 space-y-1;
+}
+.markdown-body ol {
+  @apply list-decimal pl-6 mb-3 text-sm text-slate-700 space-y-1;
+}
+.markdown-body code {
+  @apply font-mono text-[12px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-800;
+}
+.markdown-body pre {
+  @apply bg-slate-50 border border-slate-200 rounded-lg p-3 overflow-x-auto text-xs my-3;
+}
+.markdown-body table {
+  @apply w-full text-xs border border-slate-200 rounded-lg overflow-hidden my-3;
+}
+.markdown-body th,
+.markdown-body td {
+  @apply px-3 py-2 border-b border-slate-200 text-left;
+}
+.markdown-body th {
+  @apply bg-slate-50 font-semibold text-slate-700;
+}
+.markdown-body blockquote {
+  @apply border-l-4 border-brand-300 bg-brand-50/40 pl-4 py-2 my-3 text-sm text-slate-700;
+}
+.markdown-body a {
+  @apply text-brand-700 underline hover:text-brand-800;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.5; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+.pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }

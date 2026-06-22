@@ -40,6 +40,12 @@ def filter_reports_by_date(reports, start_date, end_date):
 
 
 def split_recent_and_baseline(reports, today = None, recent_days = 90, baseline_days = 365):
+    """
+    Split an already-fetched report list into recent and baseline windows.
+
+    The main pipeline now fetches these windows separately, but this helper is
+    still useful for small local tests and debugging.
+    """
     if today is None:
         today = date.today()
 
