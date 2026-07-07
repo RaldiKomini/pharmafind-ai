@@ -40,7 +40,6 @@ At a glance, PharmaFind AI turns a drug name into a grounded safety-review brief
 ![PharmaFind AI product workflow](docs/product-workflow.png)
 
 - [Workflow PDF](docs/product-workflow.pdf)
-- [LinkedIn-ready workflow PNG](docs/product-workflow-linkedin.png)
 
 ## Architecture
 
@@ -273,8 +272,6 @@ docs/
   example-output/            Sample generated PDFs
   product-workflow.png       Product workflow diagram
   product-workflow.pdf       Printable workflow diagram
-  product-workflow-linkedin.png
-                             High-resolution workflow graphic for posts
   architecture.png           Current architecture diagram
   architecture.pdf           Printable architecture diagram
 
