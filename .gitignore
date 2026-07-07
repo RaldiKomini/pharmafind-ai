@@ -25,3 +25,8 @@ frontend/.vite/
 *.tsbuildinfo
 
 .cache/
+
+# Local runtime outputs
+*.log
+tmp/
+reports/*.pdf

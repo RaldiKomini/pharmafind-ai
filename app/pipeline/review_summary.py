@@ -7,61 +7,49 @@ from app.pipeline.safety_signal import SafetySignal
 
 @dataclass(frozen=True)
 class ReviewSummary:
-    """Final deterministic review object returned to API/report layers."""
+    """Final deterministic statistics and bounded literature evidence."""
 
     drug_name: str
-
-    recent_start: date
-    recent_end: date
-    baseline_start: date
-    baseline_end: date
-
-    recent_report_count: int
-    baseline_report_count: int
-
+    analysis_start: date
+    analysis_end: date
+    total_report_count: int
+    drug_report_count: int
+    pubmed_search_terms: list[str]
     signals: list[SafetySignal]
-
     limitations: list[str]
 
 
 def build_review_summary(
     drug_name: str,
-    recent_start: date,
-    recent_end: date,
-    baseline_start: date,
-    baseline_end: date,
-    recent_report_count: int,
-    baseline_report_count: int,
+    analysis_start: date,
+    analysis_end: date,
+    total_report_count: int,
+    drug_report_count: int,
+    pubmed_search_terms: list[str],
     signals: list[SafetySignal],
 ) -> ReviewSummary:
-    """Assemble the final review summary with standard safety limitations."""
+    """Assemble a review with limitations specific to this data method."""
     return ReviewSummary(
         drug_name=drug_name,
-        recent_start=recent_start,
-        recent_end=recent_end,
-        baseline_start=baseline_start,
-        baseline_end=baseline_end,
-        recent_report_count=recent_report_count,
-        baseline_report_count=baseline_report_count,
+        analysis_start=analysis_start,
+        analysis_end=analysis_end,
+        total_report_count=total_report_count,
+        drug_report_count=drug_report_count,
+        pubmed_search_terms=pubmed_search_terms,
         signals=signals,
         limitations=[
             "FAERS reports are spontaneous adverse event reports and do not establish causality.",
-            "Report counts are not incidence rates and cannot estimate patient risk.",
-            "Reporting patterns may be affected by duplicate reports, media attention, stimulated reporting, missing data, and reporting bias.",
-            "Flagged patterns should be treated as signals for human pharmacovigilance review.",
+            "PRR and ROR describe reporting disproportionality, not incidence or patient risk.",
+            "This openFDA analysis includes all reports mentioning the selected drug; it is not restricted to primary-suspect drugs.",
+            "openFDA returns the latest report version, but separate consumer and sponsor submissions describing the same event may remain.",
+            "Drug names are matched against reported and harmonized exact-name fields; incomplete normalization can omit relevant reports.",
+            "PubMed synthesis, when requested, is restricted to the displayed retrieved abstracts and requires human review.",
         ],
     )
 
 
 def review_summary_to_dict(summary: ReviewSummary) -> dict[str, Any]:
-    """
-    Convert summary to a JSON-friendly dictionary.
-    """
     data = asdict(summary)
-
-    data["recent_start"] = summary.recent_start.isoformat()
-    data["recent_end"] = summary.recent_end.isoformat()
-    data["baseline_start"] = summary.baseline_start.isoformat()
-    data["baseline_end"] = summary.baseline_end.isoformat()
-
+    data["analysis_start"] = summary.analysis_start.isoformat()
+    data["analysis_end"] = summary.analysis_end.isoformat()
     return data

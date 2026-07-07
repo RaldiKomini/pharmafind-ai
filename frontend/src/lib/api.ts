@@ -1,6 +1,7 @@
 import type {
   AgentChatRequest,
   AgentChatResponse,
+  SafetyReviewPdfRequest,
   SafetyReviewRequest,
   SafetyReviewResponse,
 } from "./types";
@@ -83,7 +84,7 @@ export async function runReview(
 }
 
 export async function downloadReviewPdf(
-  body: SafetyReviewRequest,
+  body: SafetyReviewPdfRequest,
   signal?: AbortSignal
 ): Promise<Blob> {
   const res = await fetch(`${API_BASE_URL}/reviews/pdf`, {

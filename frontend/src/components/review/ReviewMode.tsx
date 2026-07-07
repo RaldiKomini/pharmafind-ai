@@ -23,11 +23,14 @@ import { isLlmCreditError } from "../../lib/utils";
 
 const DEFAULT_REQUEST: SafetyReviewRequest = {
   drug_name: "Ozempic",
-  recent_days: 90,
-  baseline_days: 365,
-  max_reports_per_window: 1000,
-  max_signals: 20,
+  analysis_days: 365,
+  min_case_count: 5,
+  min_prr: 2,
+  min_ror_ci_lower: 1,
+  max_signals: 10,
+  pubmed_candidate_count: 25,
   max_pubmed_papers_per_signal: 5,
+  use_embeddings: true,
   use_llm: false,
 };
 
@@ -68,10 +71,14 @@ export function ReviewMode({ backendOnline }: Props) {
   };
 
   const handleDownloadPdf = async () => {
+    if (!result) return;
     setPdfLoading(true);
     setPdfError(null);
     try {
-      const blob = await downloadReviewPdf(request);
+      const blob = await downloadReviewPdf({
+        drug_name: result.summary.drug_name || request.drug_name,
+        markdown_report: result.markdown_report,
+      });
       const safeName = request.drug_name.trim().toLowerCase().replace(/\s+/g, "_");
       triggerBlobDownload(blob, `${safeName || "review"}_safety_review.pdf`);
     } catch (e) {
@@ -98,7 +105,7 @@ export function ReviewMode({ backendOnline }: Props) {
                 </CardTitle>
                 <CardSubtle>Configure the signal-detection run</CardSubtle>
               </div>
-              <Badge tone="info" dot>FAERS + PubMed</Badge>
+              <Badge tone="info" dot>PRR/ROR + PubMed</Badge>
             </div>
           </CardHeader>
           <CardBody>
@@ -116,13 +123,13 @@ export function ReviewMode({ backendOnline }: Props) {
           <CardBody className="pt-5">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-violet-500" />
-              How signals are scored
+              How signals are detected
             </h4>
             <ul className="text-xs text-slate-600 space-y-1.5 leading-relaxed">
-              <li>• Compares recent reaction frequency to baseline window</li>
-              <li>• Flags patterns exceeding ratio + score thresholds</li>
-              <li>• Searches PubMed for supporting literature</li>
-              <li>• Grades evidence: none → weak → moderate → strong</li>
+              <li>• Builds a report-level 2×2 table for each reaction</li>
+              <li>• Calculates PRR, ROR, and 95% confidence intervals</li>
+              <li>• Applies transparent count and statistical thresholds</li>
+              <li>• Retrieves relevant PubMed abstracts with PMID citations</li>
             </ul>
           </CardBody>
         </Card>
@@ -156,8 +163,8 @@ export function ReviewMode({ backendOnline }: Props) {
               <div className="mx-auto h-12 w-12 rounded-2xl bg-gradient-to-br from-brand-500 to-teal-500 flex items-center justify-center pulse-dot">
                 <Radar className="h-6 w-6 text-white" />
               </div>
-              <p className="mt-3 text-sm font-medium text-slate-800">Aggregating FAERS reports…</p>
-              <p className="text-xs text-slate-500">Comparing patterns and searching PubMed.</p>
+              <p className="mt-3 text-sm font-medium text-slate-800">Calculating FAERS disproportionality…</p>
+              <p className="text-xs text-slate-500">Building PRR/ROR tables and retrieving PubMed abstracts.</p>
             </CardBody>
           </Card>
         )}

@@ -55,9 +55,9 @@ export default function App() {
               </span>
             </h2>
             <p className="mt-1.5 text-sm text-slate-600 max-w-2xl">
-              PharmaFind AI aggregates adverse event reports, compares recent reporting patterns
-              against a baseline, grades supporting literature, and produces a structured safety
-              brief for qualified human reviewers.
+              PharmaFind AI calculates report-level PRR and ROR with confidence intervals,
+              retrieves relevant PubMed abstracts, and produces a PMID-grounded safety brief for
+              qualified human reviewers.
             </p>
           </div>
 

@@ -16,15 +16,17 @@ def main() -> None:
         PubMedSearchConfig(
             drug_name=args.drug,
             reaction=args.reaction,
-            max_results=args.max_results,
+            candidate_count=args.max_results,
         )
     )
 
     print(f"Query: {args.drug} + {args.reaction}")
-    print(f"Papers found: {len(papers)}")
+    print(f"Total papers found: {papers.total_result_count}")
+    print(f"Abstracts retrieved: {len(papers.papers)}")
 
-    for paper in papers:
-        print(f"- {paper.title} ({paper.pub_date})")
+    for paper in papers.papers:
+        print(f"- {paper.title} ({paper.pub_date}) [PMID {paper.pmid}]")
+        print(f"  {paper.abstract[:300]}")
 
 
 if __name__ == "__main__":

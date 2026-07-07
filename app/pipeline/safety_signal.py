@@ -1,35 +1,47 @@
 from dataclasses import dataclass
 
-from app.pipeline.baseline_comparator import ReactionComparison
+from app.pipeline.disproportionality import ContingencyTable
 from app.pipeline.evidence_grader import EvidenceSummary
+from app.pipeline.signal_detector import DetectedSignal
 
 
 @dataclass(frozen=True)
 class SafetySignal:
-    """One flagged reporting signal plus its PubMed evidence summary."""
+    """One PRR/ROR reporting signal plus retrieved PubMed evidence."""
 
     reaction: str
-    recent_count: int
-    baseline_count: int
-    recent_rate: float
-    baseline_rate: float
-    ratio: float
-    signal_score: float
+    case_count: int
+    contingency_table: ContingencyTable
+    prr: float
+    prr_ci_low: float
+    prr_ci_high: float
+    ror: float
+    ror_ci_low: float
+    ror_ci_high: float
+    continuity_corrected: bool
+    passes_threshold: bool
+    threshold_reasons: list[str]
     evidence: EvidenceSummary
 
 
 def build_safety_signal(
-    comparison: ReactionComparison,
+    signal: DetectedSignal,
     evidence: EvidenceSummary,
 ) -> SafetySignal:
-    """Combine FAERS comparison data with PubMed evidence."""
+    """Combine deterministic FAERS metrics with bounded literature evidence."""
+    metrics = signal.metrics
     return SafetySignal(
-        reaction=comparison.reaction,
-        recent_count=comparison.recent_count,
-        baseline_count=comparison.baseline_count,
-        recent_rate=comparison.recent_rate,
-        baseline_rate=comparison.baseline_rate,
-        ratio=comparison.ratio,
-        signal_score=comparison.signal_score,
+        reaction=signal.reaction,
+        case_count=signal.case_count,
+        contingency_table=signal.contingency_table,
+        prr=metrics.prr,
+        prr_ci_low=metrics.prr_ci_low,
+        prr_ci_high=metrics.prr_ci_high,
+        ror=metrics.ror,
+        ror_ci_low=metrics.ror_ci_low,
+        ror_ci_high=metrics.ror_ci_high,
+        continuity_corrected=metrics.continuity_corrected,
+        passes_threshold=signal.passes_threshold,
+        threshold_reasons=signal.threshold_reasons,
         evidence=evidence,
     )

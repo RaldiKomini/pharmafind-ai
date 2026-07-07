@@ -1,48 +1,36 @@
 from app.agent.tools import (
-    run_safety_review_tool,
-    render_cached_pdf_tool,
+    compare_drugs_tool,
     explain_signal_tool,
-    compare_drugs_tool
+    render_cached_pdf_tool,
+    run_safety_review_tool,
 )
 
-# Tool schemas exposed to the OpenAI chat-completions tool-calling API.
-# The functions themselves live in tools.py so they can be tested separately.
+
+REVIEW_PROPERTIES = {
+    "analysis_days": {"type": "integer", "default": 365},
+    "min_case_count": {"type": "integer", "default": 5},
+    "min_prr": {"type": "number", "default": 2.0},
+    "min_ror_ci_lower": {"type": "number", "default": 1.0},
+    "max_signals": {"type": "integer", "default": 10},
+    "pubmed_candidate_count": {"type": "integer", "default": 25},
+    "max_pubmed_papers_per_signal": {"type": "integer", "default": 5},
+}
+
+
 TOOLS = [
     {
         "type": "function",
         "function": {
             "name": "run_safety_review",
             "description": (
-                "Run a pharmacovigilance safety review for a drug using FAERS "
-                "signals and PubMed evidence. Returns structured summary data."
+                "Run a PRR/ROR pharmacovigilance review using complete-window openFDA counts "
+                "and relevance-ranked PubMed abstracts."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "drug_name": {
-                        "type": "string",
-                        "description": "Drug name, e.g. Ozempic",
-                    },
-                    "recent_days": {
-                        "type": "integer",
-                        "default": 90,
-                    },
-                    "baseline_days": {
-                        "type": "integer",
-                        "default": 365,
-                    },
-                    "max_reports_per_window": {
-                        "type": "integer",
-                        "default": 1000,
-                    },
-                    "max_signals": {
-                        "type": "integer",
-                        "default": 10,
-                    },
-                    "max_pubmed_papers_per_signal": {
-                        "type": "integer",
-                        "default": 3,
-                    },
+                    "drug_name": {"type": "string", "description": "Brand or generic drug name"},
+                    **REVIEW_PROPERTIES,
                 },
                 "required": ["drug_name"],
                 "additionalProperties": False,
@@ -53,33 +41,18 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "render_cached_pdf",
-            "description": (
-                "Generate a PDF report from the most recent cached safety review. "
-                "Use this only after a review has already been run."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {},
-                "additionalProperties": False,
-            },
+            "description": "Generate a PDF from the most recent cached review.",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
         },
     },
     {
         "type": "function",
         "function": {
             "name": "explain_signal",
-            "description": (
-                "Explain why a specific reaction was flagged in the most recent "
-                "cached safety review. Does not rerun FAERS or PubMed."
-            ),
+            "description": "Return the cached PRR/ROR calculations and PubMed evidence for a reaction.",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "reaction": {
-                        "type": "string",
-                        "description": "Reaction term to explain, e.g. suicidal ideation",
-                    }
-                },
+                "properties": {"reaction": {"type": "string"}},
                 "required": ["reaction"],
                 "additionalProperties": False,
             },
@@ -89,25 +62,19 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "compare_drugs",
-            "description": (
-                "Compare flagged FAERS reporting signals and PubMed evidence for two drugs."
-            ),
+            "description": "Compare independently calculated reporting signals for two drugs.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "drug_a": {"type": "string"},
                     "drug_b": {"type": "string"},
-                    "recent_days": {"type": "integer", "default": 90},
-                    "baseline_days": {"type": "integer", "default": 365},
-                    "max_reports_per_window": {"type": "integer", "default": 1000},
-                    "max_signals": {"type": "integer", "default": 10},
-                    "max_pubmed_papers_per_signal": {"type": "integer", "default": 3},
+                    **REVIEW_PROPERTIES,
                 },
                 "required": ["drug_a", "drug_b"],
                 "additionalProperties": False,
             },
         },
-    }
+    },
 ]
 
 

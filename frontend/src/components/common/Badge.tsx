@@ -58,10 +58,16 @@ export function Badge({ tone = "neutral", className, icon, dot, children, ...res
 
 export function evidenceTone(grade: string): Tone {
   switch ((grade || "").toLowerCase()) {
+    case "supports":
     case "strong":
       return "success";
+    case "mixed":
     case "moderate":
-      return "teal";
+      return "warning";
+    case "refutes":
+      return "danger";
+    case "retrieved":
+      return "info";
     case "weak":
       return "warning";
     case "none":

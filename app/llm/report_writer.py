@@ -1,40 +1,12 @@
-import json
-import os
-
-from openai import OpenAI
-
-from app.pipeline.review_summary import ReviewSummary, review_summary_to_dict
-from app.llm.prompts import SAFETY_BRIEF_SYSTEM_PROMPT
+from app.pipeline.review_summary import ReviewSummary
+from app.reports.markdown_renderer import render_markdown_report
 
 
-def generate_llm_safety_brief(summary: ReviewSummary):
+def generate_llm_safety_brief(summary: ReviewSummary) -> str:
+    """Compatibility wrapper for the former free-form report writer.
+
+    Literature synthesis now happens per signal from retrieved abstracts. Final
+    report assembly remains deterministic so statistics and citations cannot be
+    rewritten or dropped by a free-form generation step.
     """
-    Generate a polished Markdown safety-review brief from a compact ReviewSummary.
-
-    The LLM receives only structured summary data, not raw FAERS reports.
-    Signal detection has already happened before this function is called.
-    """
-    client = OpenAI(api_key = os.environ["OPENAI_API_KEY"])
-    summary_dict = review_summary_to_dict(summary)
-
-    response = client.chat.completions.create(
-        model = "gpt-4.1-mini",
-        temperature = 0.2,
-        messages = [
-            {
-                "role":"system",
-                "content": SAFETY_BRIEF_SYSTEM_PROMPT,
-
-            },
-            {
-                "role":"user",
-                "content": (
-                    "Write a structured Markdown pharmacovigilance safety-review brief from this compact summary \n\n"
-                    f"{json.dumps(summary_dict, indent = 2)}"
-                ),
-            },
-        ],
-    )
-
-    return response.choices[0].message.content
-
+    return render_markdown_report(summary)

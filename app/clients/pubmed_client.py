@@ -1,95 +1,229 @@
-from dataclasses import dataclass
-import requests
+from dataclasses import dataclass, replace
+import os
 from typing import Any
+import xml.etree.ElementTree as ET
+
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 PUBMED_ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
-PUBMED_ESUMMARY_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+PUBMED_EFETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+
 
 @dataclass(frozen=True)
 class PubMedSearchConfig:
-    """PubMed query settings for one drug/reaction evidence search."""
+    """PubMed candidate-retrieval settings for one drug/reaction pair."""
 
-    drug_name:str
+    drug_name: str
     reaction: str
-    max_results: int = 5
-    sort: str = "pub date"
+    drug_aliases: tuple[str, ...] = ()
+    candidate_count: int = 25
+    sort: str = "relevance"
+
 
 @dataclass(frozen=True)
 class PubMedPaperSummary:
-    """Small subset of PubMed metadata needed by the report and UI."""
+    """PubMed metadata and abstract used for retrieval and grounded synthesis."""
 
     pmid: str
     title: str
-    source: str
-    pub_date: str
+    source: str = ""
+    pub_date: str = ""
+    abstract: str = ""
+    doi: str | None = None
+    publication_types: tuple[str, ...] = ()
+    relevance_score: float | None = None
+
+    @property
+    def url(self) -> str:
+        return f"https://pubmed.ncbi.nlm.nih.gov/{self.pmid}/"
+
+
+@dataclass(frozen=True)
+class PubMedSearchResult:
+    """Total query hits plus the bounded candidate records retrieved."""
+
+    total_result_count: int
+    papers: list[PubMedPaperSummary]
+
+
+def _retrying_session() -> requests.Session:
+    retry = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        status=3,
+        backoff_factor=0.5,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset({"GET"}),
+        respect_retry_after_header=True,
+    )
+    session = requests.Session()
+    session.mount("https://", HTTPAdapter(max_retries=retry))
+    return session
+
+
+def _element_text(element: ET.Element | None) -> str:
+    if element is None:
+        return ""
+    return "".join(element.itertext()).strip()
+
+
+def _pubmed_term(value: str) -> str:
+    return " ".join(value.replace('"', " ").split())
+
+
+def _build_pubmed_query(config: PubMedSearchConfig) -> str:
+    drug_terms: list[str] = []
+    for value in (config.drug_name, *config.drug_aliases):
+        cleaned = _pubmed_term(value)
+        if cleaned and cleaned.casefold() not in {term.casefold() for term in drug_terms}:
+            drug_terms.append(cleaned)
+    reaction = _pubmed_term(config.reaction)
+    drug_query = " OR ".join(
+        f'"{drug}"[Title/Abstract] OR "{drug}"[MeSH Terms]'
+        for drug in drug_terms
+    )
+    return (
+        f'({drug_query}) AND '
+        f'("{reaction}"[Title/Abstract] OR "{reaction}"[MeSH Terms])'
+    )
 
 
 class PubMedClient:
-    """
-    Small PubMed client using NCBI E-utilities.
+    """NCBI E-utilities client that retrieves relevance-ranked abstracts."""
 
-    This client searches literature only.
-    It does not grade evidence or interpret medical meaning.
-    """
-
-    def __init__(self, timeout: int = 20):
+    def __init__(
+        self,
+        timeout: int = 30,
+        session: requests.Session | None = None,
+    ):
         self.timeout = timeout
+        self.session = session or _retrying_session()
 
-    def search_papers(self, config: PubMedSearchConfig) -> list[PubMedPaperSummary]:
-        """Search PubMed and return summaries in the same order as the IDs."""
-        ids = self._search_pubmed_ids(config)
-        return self._fetch_summaries(ids)
-
-    def _search_pubmed_ids(self, config: PubMedSearchConfig):
-        """Return PubMed IDs for a drug/reaction title-or-abstract query."""
-
-        query = f'("{config.drug_name}" [TITLE/ABSTRACT]) AND ("{config.reaction}" [TITLE/ABSTRACT])'
-
-        params = {
-            "db": "pubmed",
-            "term": query,
-            "retmode" : "json",
-            "retmax" : config.max_results,
-            "sort": config.sort,
+    def _identity_params(self) -> dict[str, str]:
+        params: dict[str, str] = {
+            "tool": os.getenv("NCBI_TOOL", "pharmafind-ai"),
         }
+        if os.getenv("NCBI_EMAIL"):
+            params["email"] = os.environ["NCBI_EMAIL"]
+        if os.getenv("NCBI_API_KEY"):
+            params["api_key"] = os.environ["NCBI_API_KEY"]
+        return params
 
-        response = requests.get(PUBMED_ESEARCH_URL, params=params, timeout=self.timeout)
-        response.raise_for_status()
+    def search_papers(self, config: PubMedSearchConfig) -> PubMedSearchResult:
+        """Search by relevance and fetch full abstracts for the returned PMIDs."""
+        total, ids = self._search_pubmed_ids(config)
+        return PubMedSearchResult(
+            total_result_count=total,
+            papers=self._fetch_abstracts(ids),
+        )
 
-        data = response.json()
-        return data.get("esearchresult", {}).get("idlist", [])
-    
-    def _fetch_summaries(self, ids: list[str]) -> list[PubMedPaperSummary]:
-        """Fetch display metadata for PubMed IDs returned by esearch."""
-        params = {
+    def _search_pubmed_ids(
+        self,
+        config: PubMedSearchConfig,
+    ) -> tuple[int, list[str]]:
+        if config.candidate_count <= 0:
+            return 0, []
+        params: dict[str, Any] = {
             "db": "pubmed",
-            "id": ",".join(ids),
+            "term": _build_pubmed_query(config),
             "retmode": "json",
+            "retmax": config.candidate_count,
+            "sort": config.sort,
+            **self._identity_params(),
         }
-
-        response = requests.get(
-            PUBMED_ESUMMARY_URL,
+        response = self.session.get(
+            PUBMED_ESEARCH_URL,
             params=params,
             timeout=self.timeout,
         )
         response.raise_for_status()
+        result = response.json().get("esearchresult", {})
+        return int(result.get("count", 0)), list(result.get("idlist", []))
 
-        data: dict[str, Any] = response.json()
-        result = data.get("result", {})
+    def _fetch_abstracts(self, ids: list[str]) -> list[PubMedPaperSummary]:
+        if not ids:
+            return []
+        params = {
+            "db": "pubmed",
+            "id": ",".join(ids),
+            "retmode": "xml",
+            **self._identity_params(),
+        }
+        response = self.session.get(
+            PUBMED_EFETCH_URL,
+            params=params,
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return parse_pubmed_xml(response.content, ids)
 
-        papers: list[PubMedPaperSummary] = []
 
-        for pmid in ids:
-            item = result.get(pmid, {})
+def parse_pubmed_xml(
+    xml_content: bytes | str,
+    requested_ids: list[str] | None = None,
+) -> list[PubMedPaperSummary]:
+    """Parse PubMed XML while preserving the requested PMID order."""
+    root = ET.fromstring(xml_content)
+    papers_by_id: dict[str, PubMedPaperSummary] = {}
+    for article_record in root.findall(".//PubmedArticle"):
+        citation = article_record.find("MedlineCitation")
+        article = citation.find("Article") if citation is not None else None
+        pmid = _element_text(citation.find("PMID") if citation is not None else None)
+        if not pmid or article is None:
+            continue
 
-            papers.append(
-                PubMedPaperSummary(
-                    pmid=pmid,
-                    title=item.get("title", ""),
-                    source=item.get("source"),
-                    pub_date=item.get("pubdate"),
-                )
+        abstract_parts: list[str] = []
+        for abstract_node in article.findall("./Abstract/AbstractText"):
+            text = _element_text(abstract_node)
+            if not text:
+                continue
+            label = abstract_node.attrib.get("Label")
+            abstract_parts.append(f"{label}: {text}" if label else text)
+
+        journal = article.find("Journal")
+        pub_date = journal.find("./JournalIssue/PubDate") if journal is not None else None
+        date_parts = []
+        if pub_date is not None:
+            for field in ("Year", "MedlineDate", "Month", "Day"):
+                value = _element_text(pub_date.find(field))
+                if value:
+                    date_parts.append(value)
+
+        doi = None
+        for article_id in article_record.findall("./PubmedData/ArticleIdList/ArticleId"):
+            if article_id.attrib.get("IdType") == "doi":
+                doi = _element_text(article_id) or None
+                break
+
+        publication_types = tuple(
+            text
+            for text in (
+                _element_text(node)
+                for node in article.findall("./PublicationTypeList/PublicationType")
             )
+            if text
+        )
+        papers_by_id[pmid] = PubMedPaperSummary(
+            pmid=pmid,
+            title=_element_text(article.find("ArticleTitle")),
+            source=_element_text(journal.find("Title") if journal is not None else None),
+            pub_date=" ".join(date_parts),
+            abstract="\n".join(abstract_parts),
+            doi=doi,
+            publication_types=publication_types,
+        )
 
-        return papers
+    ordered_ids = requested_ids or list(papers_by_id)
+    return [papers_by_id[pmid] for pmid in ordered_ids if pmid in papers_by_id]
+
+
+def with_relevance_score(
+    paper: PubMedPaperSummary,
+    score: float,
+) -> PubMedPaperSummary:
+    """Return an immutable paper record annotated with a retrieval score."""
+    return replace(paper, relevance_score=score)

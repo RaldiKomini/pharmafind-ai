@@ -37,7 +37,7 @@ export function ReviewForm({ value, onChange, onSubmit, loading, disabled }: Pro
           />
         </div>
         <p className="mt-1.5 text-[11px] text-slate-500">
-          Enter a brand or generic drug name. The backend will query FAERS + PubMed.
+          Enter a brand or generic drug name. Analysis uses all FAERS reports mentioning that name.
         </p>
       </div>
 
